@@ -1,0 +1,12 @@
+{
+  "borderWidth": 4,
+  "defaultColor": "#808080",
+  "branches": [
+    { "pattern": "master", "match": "exact", "color": "#FF0000" },
+    { "pattern": "main", "match": "exact", "color": "#FF0000" },
+    { "pattern": "develop", "match": "exact", "color": "#FF6600" },
+    { "pattern": "feature/", "match": "prefix", "color": "#9933FF" },
+    { "pattern": "hotfix/", "match": "prefix", "color": "#FF0000" },
+    { "pattern": "release/.*", "match": "regex", "color": "#FFCC00" }
+  ]
+}

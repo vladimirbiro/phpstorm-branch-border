@@ -1,0 +1,50 @@
+<idea-plugin>
+    <id>com.vladimir.biro.branchborder</id>
+    <name>Git Branch Border</name>
+    <vendor>vladimir.biro</vendor>
+
+    <description><![CDATA[
+    Displays a colored border around the IDE window based on the current Git branch.
+    <br><br>
+    <b>Features:</b>
+    <ul>
+        <li>Visual indication of current branch via colored window border</li>
+        <li>Configurable colors per branch</li>
+        <li>Supports exact match, prefix match, and regex patterns</li>
+        <li>Hot-reload - changes to config are applied immediately</li>
+        <li>No border when config file is missing (non-intrusive)</li>
+    </ul>
+    <b>Configuration:</b><br>
+    Create <code>.branch-colors.json</code> in your project root:
+    <pre>
+{
+  "borderWidth": 4,
+  "defaultColor": "#FF6600",
+  "branches": [
+    { "pattern": "master", "match": "exact", "color": "#FF0000" },
+    { "pattern": "develop", "match": "exact", "color": "#00FF00" },
+    { "pattern": "feature/", "match": "prefix", "color": "#9933FF" }
+  ]
+}
+    </pre>
+    <b>Match types:</b> <code>exact</code>, <code>prefix</code>, <code>regex</code>
+    ]]></description>
+
+    <change-notes><![CDATA[
+    <b>1.0.0</b>
+    <ul>
+        <li>Initial release</li>
+        <li>Colored border based on Git branch</li>
+        <li>JSON configuration with exact/prefix/regex matching</li>
+        <li>Hot-reload of configuration changes</li>
+    </ul>
+    ]]></change-notes>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>Git4Idea</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="com.vladimirbiro.branchborder.BranchBorderStartupActivity"/>
+        <projectService serviceImplementation="com.vladimirbiro.branchborder.BranchBorderService"/>
+    </extensions>
+</idea-plugin>
