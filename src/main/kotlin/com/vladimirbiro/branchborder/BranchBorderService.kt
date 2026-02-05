@@ -66,6 +66,7 @@ class BranchBorderService(private val project: Project) : Disposable {
         }
 
         painter = BorderPainter()
+        painter!!.setRepaintCallback { rootPane?.repaint() }
 
         try {
             IdeGlassPaneUtil.installPainter(rootPane!!, painter!!, this)
@@ -79,12 +80,12 @@ class BranchBorderService(private val project: Project) : Disposable {
         val cfg = config ?: return
         val p = painter ?: return
 
-        val color = cfg.getColorForBranch(currentBranch)
-        p.updateBorder(color, cfg.borderWidth)
+        val settings = cfg.getSettingsForBranch(currentBranch)
+        p.updateBorder(settings.color, cfg.borderWidth, settings.blinking)
 
         rootPane?.repaint()
 
-        log.info("Border updated: branch=$currentBranch, color=$color")
+        log.info("Border updated: branch=$currentBranch, color=${settings.color}, blinking=${settings.blinking?.enabled}")
     }
 
     private fun onConfigChanged() {

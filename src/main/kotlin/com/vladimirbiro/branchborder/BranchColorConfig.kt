@@ -7,15 +7,22 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import java.awt.Color
 
+data class BlinkingConfig(
+    val enabled: Boolean = false,
+    val interval: Int = 500
+)
+
 data class BranchRule(
     val pattern: String,
     val match: String = "exact",
-    val color: String
+    val color: String,
+    val blinking: BlinkingConfig? = null
 )
 
 data class BranchColorConfigData(
     val borderWidth: Int = 4,
     val defaultColor: String? = null,
+    val blinking: BlinkingConfig? = null,
     @SerializedName("branches")
     val branches: List<BranchRule> = emptyList()
 )
@@ -28,6 +35,8 @@ class BranchColorConfig(private val project: Project) {
     var borderWidth: Int = 4
         private set
     var defaultColor: Color? = null
+        private set
+    var defaultBlinking: BlinkingConfig? = null
         private set
     private var branches: List<BranchRule> = emptyList()
 
@@ -42,6 +51,7 @@ class BranchColorConfig(private val project: Project) {
 
             borderWidth = data.borderWidth.coerceIn(1, 20)
             defaultColor = data.defaultColor?.let { parseColor(it) }
+            defaultBlinking = data.blinking
             branches = data.branches
 
             log.info("Loaded branch-colors config: ${branches.size} rules, borderWidth=$borderWidth")
@@ -56,8 +66,15 @@ class BranchColorConfig(private val project: Project) {
         return project.baseDir?.findChild(configFileName)
     }
 
-    fun getColorForBranch(branchName: String?): Color? {
-        if (branchName == null) return defaultColor
+    data class BranchSettings(
+        val color: Color?,
+        val blinking: BlinkingConfig?
+    )
+
+    fun getSettingsForBranch(branchName: String?): BranchSettings {
+        if (branchName == null) {
+            return BranchSettings(defaultColor, defaultBlinking)
+        }
 
         for (rule in branches) {
             val matches = when (rule.match) {
@@ -75,11 +92,16 @@ class BranchColorConfig(private val project: Project) {
             }
 
             if (matches) {
-                return parseColor(rule.color)
+                val blinking = rule.blinking ?: defaultBlinking
+                return BranchSettings(parseColor(rule.color), blinking)
             }
         }
 
-        return defaultColor
+        return BranchSettings(defaultColor, defaultBlinking)
+    }
+
+    fun getColorForBranch(branchName: String?): Color? {
+        return getSettingsForBranch(branchName).color
     }
 
     private fun parseColor(hex: String): Color? {

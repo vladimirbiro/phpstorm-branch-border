@@ -11,6 +11,7 @@
         <li>Visual indication of current branch via colored window border</li>
         <li>Configurable colors per branch</li>
         <li>Supports exact match, prefix match, and regex patterns</li>
+        <li>Optional blinking border for critical branches</li>
         <li>Hot-reload - changes to config are applied immediately</li>
         <li>No border when config file is missing (non-intrusive)</li>
     </ul>
@@ -20,17 +21,26 @@
 {
   "borderWidth": 4,
   "defaultColor": "#FF6600",
+  "blinking": { "enabled": false, "interval": 500 },
   "branches": [
     { "pattern": "master", "match": "exact", "color": "#FF0000" },
-    { "pattern": "develop", "match": "exact", "color": "#00FF00" },
+    { "pattern": "production", "match": "exact", "color": "#FF0000",
+      "blinking": { "enabled": true, "interval": 300 } },
     { "pattern": "feature/", "match": "prefix", "color": "#9933FF" }
   ]
 }
     </pre>
-    <b>Match types:</b> <code>exact</code>, <code>prefix</code>, <code>regex</code>
+    <b>Match types:</b> <code>exact</code>, <code>prefix</code>, <code>regex</code><br>
+    <b>Blinking:</b> Set <code>enabled: true</code> and <code>interval</code> in ms (100-5000)
     ]]></description>
 
     <change-notes><![CDATA[
+    <b>1.1.0</b>
+    <ul>
+        <li>Added blinking border support</li>
+        <li>Global and per-branch blinking configuration</li>
+        <li>Configurable blink interval (100-5000ms)</li>
+    </ul>
     <b>1.0.0</b>
     <ul>
         <li>Initial release</li>
