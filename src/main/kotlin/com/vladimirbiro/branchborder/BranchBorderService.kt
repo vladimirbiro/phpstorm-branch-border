@@ -7,6 +7,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.IdeGlassPaneUtil
 import com.intellij.openapi.wm.WindowManager
+import com.vladimirbiro.branchborder.settings.BranchBorderSettings
+import com.vladimirbiro.branchborder.settings.BorderStyle
 import java.awt.Color
 import javax.swing.JRootPane
 
@@ -15,41 +17,25 @@ class BranchBorderService(private val project: Project) : Disposable {
 
     private val log = Logger.getInstance(BranchBorderService::class.java)
 
-    private var config: BranchColorConfig? = null
     private var painter: BorderPainter? = null
     private var gitListener: GitBranchListener? = null
-    private var configWatcher: ConfigFileWatcher? = null
     private var currentBranch: String? = null
     private var rootPane: JRootPane? = null
+
+    private val settings: BranchBorderSettings
+        get() = BranchBorderSettings.getInstance(project)
 
     fun initialize() {
         log.info("Initializing BranchBorderService for project: ${project.name}")
 
-        config = BranchColorConfig(project)
-
-        // Load initial config
-        if (!config!!.loadConfig()) {
-            log.info("No config file found, plugin inactive")
-            return
-        }
-
-        // Setup painter
         setupPainter()
 
-        // Setup git listener
         gitListener = GitBranchListener(project) { branch ->
             currentBranch = branch
             updateBorder()
         }
         Disposer.register(this, gitListener!!)
         gitListener!!.start()
-
-        // Setup config file watcher
-        configWatcher = ConfigFileWatcher(project, config!!.configFileName) {
-            onConfigChanged()
-        }
-        Disposer.register(this, configWatcher!!)
-        configWatcher!!.start()
 
         log.info("BranchBorderService initialized")
     }
@@ -77,39 +63,97 @@ class BranchBorderService(private val project: Project) : Disposable {
     }
 
     private fun updateBorder() {
-        val cfg = config ?: return
         val p = painter ?: return
 
-        val settings = cfg.getSettingsForBranch(currentBranch)
-        p.updateBorder(settings.color, cfg.borderWidth, settings.blinking)
+        if (!settings.enabled) {
+            p.updateBorder(null, settings.borderWidth)
+            rootPane?.repaint()
+            return
+        }
+
+        val branchSettings = getSettingsForBranch(currentBranch)
+
+        p.updateBorder(
+            color = branchSettings.color,
+            width = settings.borderWidth,
+            style = branchSettings.style,
+            blinking = branchSettings.blinking,
+            interval = settings.blinkInterval
+        )
 
         rootPane?.repaint()
 
-        log.info("Border updated: branch=$currentBranch, color=${settings.color}, blinking=${settings.blinking?.enabled}")
+        log.info("Border updated: branch=$currentBranch, color=${branchSettings.color}, style=${branchSettings.style}, blinking=${branchSettings.blinking}")
     }
 
-    private fun onConfigChanged() {
-        log.info("Config file changed, reloading...")
+    private data class BranchSettings(
+        val color: Color?,
+        val style: BorderStyle,
+        val blinking: Boolean
+    )
 
-        val cfg = config ?: return
-
-        if (cfg.loadConfig()) {
-            // Config loaded successfully, check if we need to setup painter
-            if (painter == null) {
-                setupPainter()
-            }
-            updateBorder()
-        } else {
-            // Config removed or invalid, hide border
-            painter?.updateBorder(null, 4)
-            rootPane?.repaint()
+    private fun getSettingsForBranch(branchName: String?): BranchSettings {
+        if (branchName == null) {
+            return getDefaultSettings()
         }
+
+        for (rule in settings.branchRules) {
+            val matches = when (rule.matchType) {
+                "exact" -> branchName == rule.pattern
+                "prefix" -> branchName.startsWith(rule.pattern)
+                "regex" -> {
+                    try {
+                        Regex(rule.pattern).matches(branchName)
+                    } catch (e: Exception) {
+                        log.warn("Invalid regex pattern: ${rule.pattern}")
+                        false
+                    }
+                }
+                else -> false
+            }
+
+            if (matches) {
+                return BranchSettings(
+                    color = parseColor(rule.color),
+                    style = rule.borderStyle ?: settings.defaultBorderStyle,
+                    blinking = rule.blinking
+                )
+            }
+        }
+
+        return getDefaultSettings()
+    }
+
+    private fun getDefaultSettings(): BranchSettings {
+        return if (settings.noBorderIfUnmatched) {
+            BranchSettings(null, settings.defaultBorderStyle, false)
+        } else {
+            BranchSettings(
+                color = parseColor(settings.defaultColor),
+                style = settings.defaultBorderStyle,
+                blinking = settings.defaultBlinking
+            )
+        }
+    }
+
+    private fun parseColor(hex: String): Color? {
+        return try {
+            val cleanHex = hex.removePrefix("#")
+            Color(cleanHex.toInt(16))
+        } catch (e: Exception) {
+            log.warn("Invalid color: $hex")
+            null
+        }
+    }
+
+    fun onSettingsChanged() {
+        log.info("Settings changed, updating border...")
+        updateBorder()
     }
 
     override fun dispose() {
         log.info("Disposing BranchBorderService")
         painter = null
-        config = null
         rootPane = null
     }
 

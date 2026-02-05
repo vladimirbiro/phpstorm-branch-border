@@ -5,59 +5,44 @@ PhpStorm/IntelliJ plugin that displays a colored border around the IDE window ba
 ## Features
 
 - Visual indication of current branch via colored window border
+- Settings UI for easy configuration (Settings → Tools → Git Branch Border)
 - Configurable colors per branch (exact match, prefix, regex)
+- Solid or dashed border styles
 - Optional blinking border for critical branches (e.g. production)
-- Hot-reload - changes to config are applied immediately
-- Supports multiple projects with different configurations
+- Import from JSON for migration from older versions
 
 ## Configuration
 
-Create `.branch-colors.json` in your project root:
+Go to **Settings → Tools → Git Branch Border** to configure:
 
-```json
-{
-  "borderWidth": 4,
-  "defaultColor": "#FF6600",
-  "branches": [
-    { "pattern": "master", "match": "exact", "color": "#FF0000" },
-    { "pattern": "main", "match": "exact", "color": "#FF0000" },
-    { "pattern": "production", "match": "exact", "color": "#FF0000",
-      "blinking": { "enabled": true, "interval": 300 } },
-    { "pattern": "develop", "match": "exact", "color": "#00FF00" },
-    { "pattern": "feature/", "match": "prefix", "color": "#9933FF" },
-    { "pattern": "hotfix/", "match": "prefix", "color": "#FF0000" },
-    { "pattern": "release/.*", "match": "regex", "color": "#FFCC00" }
-  ]
-}
-```
+### General
+- **Enable Git Branch Border** - Turn the plugin on/off
+- **Border width** - Thickness in pixels (1-20)
+- **Blink interval** - Blinking speed in milliseconds (100-5000)
 
-### Match types
+### Default (branches without rule)
+- **Color** - Default border color
+- **Border style** - Solid or Dashed
+- **Enable blinking** - Blink for unmatched branches
+- **No border if unmatched** - Hide border when no rule matches
 
-- `exact` - Branch name must match exactly
-- `prefix` - Branch name must start with pattern
-- `regex` - Branch name must match regular expression
+### Branch Rules
+Add rules for specific branches:
+- **Pattern** - Text to match against branch name
+- **Match type** - `exact`, `prefix`, or `regex`
+- **Color** - Border color for matching branches
+- **Border style** - Solid, Dashed, or Default (inherit from settings)
+- **Blinking** - Enable blinking for this rule
 
-### Options
+Rules are evaluated top to bottom. First match wins.
 
-- `borderWidth` - Border thickness in pixels (1-20)
-- `defaultColor` - Color for branches not matching any rule (optional)
-- `blinking` - Global blinking settings (optional, see below)
-- `branches` - Array of rules (evaluated in order, first match wins)
+## Migration from v1.1.0
 
-### Blinking
-
-Make the border blink to draw attention to critical branches:
-
-```json
-{
-  "blinking": { "enabled": true, "interval": 500 }
-}
-```
-
-- `enabled` - Enable/disable blinking (default: `false`)
-- `interval` - Blink interval in milliseconds (100-5000, default: `500`)
-
-Blinking can be set globally (applies to all branches) or per-branch (overrides global setting).
+If you have an existing `.branch-colors.json` configuration:
+1. Go to Settings → Tools → Git Branch Border
+2. Click "Import from JSON..."
+3. Select your `.branch-colors.json` file
+4. Click Apply
 
 ## Installation
 
