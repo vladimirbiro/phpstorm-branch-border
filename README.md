@@ -30,6 +30,7 @@ Go to **Settings → Tools → Git Branch Border** to configure:
 Add rules for specific branches:
 - **Pattern** - Text to match against branch name
 - **Match type** - `exact`, `prefix`, or `regex`
+- **No border** - Explicitly disable border for matching branches
 - **Color** - Border color for matching branches
 - **Border style** - Solid, Dashed, or Default (inherit from settings)
 - **Blinking** - Enable blinking for this rule

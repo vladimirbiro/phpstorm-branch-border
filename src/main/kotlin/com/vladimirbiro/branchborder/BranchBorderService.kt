@@ -137,6 +137,7 @@ class BranchBorderService(private val project: Project) : Disposable {
     }
 
     private fun parseColor(hex: String): Color? {
+        if (hex == "none") return null
         return try {
             val cleanHex = hex.removePrefix("#")
             Color(cleanHex.toInt(16))

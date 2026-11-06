@@ -17,6 +17,7 @@ class BranchRuleDialog(
 
     private val patternField = JBTextField(20)
     private val matchTypeCombo = JComboBox(arrayOf("exact", "prefix", "regex"))
+    private val noBorderCheckbox = JBCheckBox("No border")
     private val colorPanel = ColorPanel()
     private val styleCombo = JComboBox(arrayOf("Default", "Solid", "Dashed"))
     private val blinkingCheckbox = JBCheckBox("Enable blinking")
@@ -34,7 +35,12 @@ class BranchRuleDialog(
         rule?.let {
             patternField.text = it.pattern
             matchTypeCombo.selectedItem = it.matchType
-            colorPanel.selectedColor = Color.decode(it.color)
+            if (it.color == "none") {
+                noBorderCheckbox.isSelected = true
+                colorPanel.selectedColor = Color.RED
+            } else {
+                colorPanel.selectedColor = Color.decode(it.color)
+            }
             styleCombo.selectedIndex = when (it.borderStyle) {
                 null -> 0
                 BorderStyle.SOLID -> 1
@@ -44,6 +50,14 @@ class BranchRuleDialog(
         } ?: run {
             colorPanel.selectedColor = Color.RED
         }
+        updateNoBorderState()
+    }
+
+    private fun updateNoBorderState() {
+        val noBorder = noBorderCheckbox.isSelected
+        colorPanel.isEnabled = !noBorder
+        styleCombo.isEnabled = !noBorder
+        blinkingCheckbox.isEnabled = !noBorder
     }
 
     override fun createCenterPanel(): JComponent {
@@ -65,26 +79,35 @@ class BranchRuleDialog(
         gbc.gridx = 1
         panel.add(matchTypeCombo, gbc)
 
+        // No border
+        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2
+        noBorderCheckbox.addActionListener {
+            updateNoBorderState()
+            updatePreview()
+        }
+        panel.add(noBorderCheckbox, gbc)
+        gbc.gridwidth = 1
+
         // Color
-        gbc.gridx = 0; gbc.gridy = 2
+        gbc.gridx = 0; gbc.gridy = 3
         panel.add(JBLabel("Color:"), gbc)
         gbc.gridx = 1
         colorPanel.addActionListener { updatePreview() }
         panel.add(colorPanel, gbc)
 
         // Border style
-        gbc.gridx = 0; gbc.gridy = 3
+        gbc.gridx = 0; gbc.gridy = 4
         panel.add(JBLabel("Border style:"), gbc)
         gbc.gridx = 1
         styleCombo.addActionListener { updatePreview() }
         panel.add(styleCombo, gbc)
 
         // Blinking
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2
         panel.add(blinkingCheckbox, gbc)
 
         // Preview
-        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2
+        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2
         gbc.fill = GridBagConstraints.BOTH; gbc.weighty = 1.0
         panel.add(createPreviewSection(), gbc)
 
@@ -102,20 +125,25 @@ class BranchRuleDialog(
     }
 
     private fun updatePreview() {
-        val color = colorPanel.selectedColor ?: Color.RED
-        val style = when (styleCombo.selectedIndex) {
-            0 -> defaultStyle
-            1 -> BorderStyle.SOLID
-            else -> BorderStyle.DASHED
+        if (noBorderCheckbox.isSelected) {
+            previewPanel.updateBorder(null, defaultStyle)
+        } else {
+            val color = colorPanel.selectedColor ?: Color.RED
+            val style = when (styleCombo.selectedIndex) {
+                0 -> defaultStyle
+                1 -> BorderStyle.SOLID
+                else -> BorderStyle.DASHED
+            }
+            previewPanel.updateBorder(color, style)
         }
-        previewPanel.updateBorder(color, style)
     }
 
     fun getResult(): BranchRuleState {
         return BranchRuleState(
             pattern = patternField.text,
             matchType = matchTypeCombo.selectedItem as String,
-            color = String.format("#%06X", colorPanel.selectedColor?.rgb?.and(0xFFFFFF) ?: 0xFF0000),
+            color = if (noBorderCheckbox.isSelected) "none"
+                    else String.format("#%06X", colorPanel.selectedColor?.rgb?.and(0xFFFFFF) ?: 0xFF0000),
             borderStyle = when (styleCombo.selectedIndex) {
                 0 -> null
                 1 -> BorderStyle.SOLID
@@ -142,11 +170,11 @@ class BranchRuleDialog(
 
 class BorderPreviewPanel : JPanel() {
 
-    private var borderColor: Color = Color.RED
+    private var borderColor: Color? = Color.RED
     private var borderStyle: BorderStyle = BorderStyle.SOLID
     private val borderWidth = 4
 
-    fun updateBorder(color: Color, style: BorderStyle) {
+    fun updateBorder(color: Color?, style: BorderStyle) {
         borderColor = color
         borderStyle = style
         repaint()
@@ -160,8 +188,21 @@ class BorderPreviewPanel : JPanel() {
         g2.color = background
         g2.fillRect(0, 0, width, height)
 
+        val color = borderColor
+        if (color == null) {
+            // No border - show "No border" text
+            g2.color = foreground
+            g2.font = Font("Dialog", Font.ITALIC, 12)
+            val text = "No border"
+            val fm = g2.fontMetrics
+            val textX = (width - fm.stringWidth(text)) / 2
+            val textY = (height + fm.ascent - fm.descent) / 2
+            g2.drawString(text, textX, textY)
+            return
+        }
+
         // Border
-        g2.color = borderColor
+        g2.color = color
 
         if (borderStyle == BorderStyle.DASHED) {
             g2.stroke = BasicStroke(

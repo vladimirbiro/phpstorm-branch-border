@@ -332,7 +332,10 @@ class ColorCellRenderer : DefaultTableCellRenderer() {
         column: Int
     ): Component {
         val component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
-        if (value is String && value.startsWith("#")) {
+        if (value is String && value == "none") {
+            icon = null
+            text = "None"
+        } else if (value is String && value.startsWith("#")) {
             try {
                 val color = Color.decode(value)
                 icon = ColorIcon(color)
